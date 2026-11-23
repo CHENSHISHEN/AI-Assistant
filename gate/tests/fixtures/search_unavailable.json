@@ -1,0 +1,11 @@
+{
+  "id": "fixture",
+  "ok": true,
+  "result": {
+    "kind": "unavailable",
+    "reason": "disabled"
+  },
+  "_meta": {
+    "runtimeId": null
+  }
+}

@@ -1,0 +1,15 @@
+[Unit]
+Description=assistant-net 防火墙规则（INPUT 链，只放行网关端口）
+Documentation=file:///Github/Assistant/scripts/firewall/README.md
+After=docker.service network-online.target
+Wants=docker.service
+PartOf=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/lib/assistant-firewall/apply.sh apply
+ExecStop=/usr/local/lib/assistant-firewall/rollback.sh
+
+[Install]
+WantedBy=multi-user.target

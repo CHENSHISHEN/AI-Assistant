@@ -1,0 +1,42 @@
+{
+  "id": "fixture",
+  "ok": true,
+  "result": {
+    "kind": "results",
+    "hits": [
+      {
+        "agent": "codex",
+        "sessionId": "sess-1",
+        "title": "示例任务一",
+        "cwd": "/srv/demo/repo1",
+        "branch": "main",
+        "updatedAt": "2026-11-22T00:00:00.000Z",
+        "messageCount": 12,
+        "score": 3.2,
+        "source": {
+          "presence": "unverifiable"
+        },
+        "evidence": {
+          "snippet": "运行 npm test 并修复失败用例",
+          "role": "assistant",
+          "timestamp": null
+        }
+      }
+    ],
+    "page": {
+      "cursor": null,
+      "hasMore": false
+    },
+    "generation": 1,
+    "truncated": {
+      "candidates": false,
+      "snippets": 0,
+      "query": false,
+      "freshness": false
+    },
+    "durationMs": 3
+  },
+  "_meta": {
+    "runtimeId": null
+  }
+}

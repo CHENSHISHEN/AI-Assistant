@@ -1,0 +1,59 @@
+{
+  "id": "fixture",
+  "ok": true,
+  "result": {
+    "worktrees": [
+      {
+        "workspaceKind": "git",
+        "worktreeId": "00000000-0000-4000-8000-0000000000b1::/srv/demo/repo1",
+        "repoId": "00000000-0000-4000-8000-0000000000b1",
+        "hostId": "local",
+        "terminalPlatform": "linux",
+        "repo": "demo-repo",
+        "path": "/srv/demo/repo1",
+        "branch": "refs/heads/main",
+        "isArchived": false,
+        "isMainWorktree": true,
+        "hasHostSidebarActivity": true,
+        "defaultBranch": true,
+        "worktreeInstanceId": "cdf41d5d-b0d9-439c-94b3-820815a0cab7",
+        "parentWorktreeId": null,
+        "childWorktreeIds": [],
+        "displayName": "main",
+        "workspaceStatus": "in-progress",
+        "sortOrder": 1794794492884,
+        "lastActivityAt": 1794656889793,
+        "linkedIssue": null,
+        "linkedPR": null,
+        "linkedLinearIssue": null,
+        "linkedGitLabMR": null,
+        "linkedGitLabIssue": null,
+        "linkedItems": [],
+        "comment": "",
+        "isPinned": false,
+        "isActive": false,
+        "unread": false,
+        "liveTerminalCount": 4,
+        "hasAttachedPty": true,
+        "unverifiableTerminalCount": 0,
+        "lastOutputAt": 1795174887967,
+        "preview": "示例预览",
+        "status": "active",
+        "agents": [],
+        "sidebarStatus": "active",
+        "terminalVerdict": "live"
+      }
+    ],
+    "hostScope": {
+      "hostIds": [
+        "local"
+      ],
+      "omittedHostIds": []
+    },
+    "totalCount": 1,
+    "truncated": false
+  },
+  "_meta": {
+    "runtimeId": "00000000-0000-4000-8000-0000000000ff"
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "id": "fixture",
+  "ok": true,
+  "result": {
+    "terminals": [
+      {
+        "handle": "term_00000000-0000-4000-8000-000000000001",
+        "ptyId": "00000000-0000-4000-8000-0000000000a1::/srv/demo/repo1@@abc1",
+        "incarnationId": "inc-1",
+        "orphaned": false,
+        "worktreeId": "00000000-0000-4000-8000-0000000000b1::/srv/demo/repo1",
+        "worktreePath": "",
+        "branch": "",
+        "tabId": "tab-1",
+        "leafId": "leaf-1",
+        "title": "示例任务一",
+        "connected": true,
+        "writable": true,
+        "lastOutputAt": null,
+        "preview": "正在实现示例功能，下一步补测试。\n› Ask to do anything",
+        "executionHostId": "local",
+        "agentIdentity": "codex"
+      },
+      {
+        "handle": "term_00000000-0000-4000-8000-000000000002",
+        "ptyId": "00000000-0000-4000-8000-0000000000a2::/srv/demo/repo2@@abc2",
+        "incarnationId": "inc-2",
+        "orphaned": false,
+        "worktreeId": "00000000-0000-4000-8000-0000000000b2::/srv/demo/repo2",
+        "worktreePath": "",
+        "branch": "",
+        "tabId": "tab-2",
+        "leafId": "leaf-2",
+        "title": "示例任务二",
+        "connected": true,
+        "writable": true,
+        "lastOutputAt": null,
+        "preview": "等待确认：是否运行 npm test？(y/n)",
+        "executionHostId": "local",
+        "agentIdentity": "claude"
+      },
+      {
+        "handle": "term_00000000-0000-4000-8000-000000000003",
+        "ptyId": "00000000-0000-4000-8000-0000000000a3::/srv/demo/repo3@@abc3",
+        "incarnationId": "inc-3",
+        "orphaned": false,
+        "worktreeId": "00000000-0000-4000-8000-0000000000b3::/srv/demo/repo3",
+        "worktreePath": "",
+        "branch": "refs/heads/master",
+        "tabId": "tab-3",
+        "leafId": "leaf-3",
+        "title": "shell",
+        "connected": true,
+        "writable": true,
+        "lastOutputAt": 1795102478554,
+        "preview": "$ ls\nREADME.md",
+        "executionHostId": "local"
+      }
+    ],
+    "hostScope": {
+      "hostIds": [
+        "local"
+      ],
+      "omittedHostIds": []
+    },
+    "topologyRevisions": {
+      "00000000-0000-4000-8000-0000000000b1::/srv/demo/repo1": 10,
+      "00000000-0000-4000-8000-0000000000b2::/srv/demo/repo2": 32,
+      "00000000-0000-4000-8000-0000000000b3::/srv/demo/repo3": 1
+    },
+    "totalCount": 3,
+    "truncated": false
+  },
+  "_meta": {
+    "runtimeId": "00000000-0000-4000-8000-0000000000ff"
+  }
+}
