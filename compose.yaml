@@ -82,7 +82,7 @@ services:
       - ./secrets/telegram_bot_token:/run/secrets/telegram_bot_token:ro   # 只发通知用，网关不收消息
       - ./secrets/orca_pairing_code:/run/secrets/orca_pairing_code:ro   # 换配对码：替换此文件后重启网关
     tmpfs:
-      - /tmp:uid=1001,gid=1001,mode=700
+      - /tmp:uid=${ASSISTANT_UID:-1001},gid=${ASSISTANT_GID:-1001},mode=700
     mem_limit: 512m
     pids_limit: 256
     cap_drop: [ALL]
