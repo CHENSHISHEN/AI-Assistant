@@ -1,0 +1,54 @@
+{
+  "id": "fixture",
+  "ok": true,
+  "result": {
+    "terminal": {
+      "handle": "term_00000000-0000-4000-8000-000000000001",
+      "status": "running",
+      "tail": [
+        "示例输出第一行",
+        "$ echo hello",
+        "hello",
+        "等待确认：是否运行 npm test？(y/n)",
+        "export API_KEY=sk-Ab12Cd34Ef",
+        "56Gh78Ij90 done"
+      ],
+      "truncated": false,
+      "limited": false,
+      "oldestCursor": "0",
+      "nextCursor": "6",
+      "latestCursor": "6",
+      "returnedLineCount": 6,
+      "source": "screen",
+      "tailRows": [
+        {
+          "wrapped": false,
+          "trailingSpaces": 0
+        },
+        {
+          "wrapped": false,
+          "trailingSpaces": 0
+        },
+        {
+          "wrapped": false,
+          "trailingSpaces": 0
+        },
+        {
+          "wrapped": false,
+          "trailingSpaces": 2
+        },
+        {
+          "wrapped": false,
+          "trailingSpaces": 0
+        },
+        {
+          "wrapped": true,
+          "trailingSpaces": 0
+        }
+      ]
+    }
+  },
+  "_meta": {
+    "runtimeId": "00000000-0000-4000-8000-0000000000ff"
+  }
+}

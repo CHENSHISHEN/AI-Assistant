@@ -1,0 +1,38 @@
+{
+  "gateway": {
+    "mode": "local",
+    "bind": "lan",
+    "port": 18789,
+    "auth": { "mode": "token", "token": { "source": "file", "provider": "gwtoken", "id": "value" } }
+  },
+  "secrets": {
+    "providers": {
+      "gwtoken": { "source": "file", "path": "/run/secrets/openclaw_gateway_token", "mode": "singleValue" },
+      "zaikey": { "source": "file", "path": "/run/secrets/zhipu_api_key", "mode": "singleValue" }
+    }
+  },
+  "plugins": { "entries": { "zai": { "enabled": true }, "telegram": { "enabled": true } } },
+  "models": {
+    "providers": {
+      "zai": {
+        "baseUrl": "https://open.bigmodel.cn/api/coding/paas/v4",
+        "apiKey": { "source": "file", "provider": "zaikey", "id": "value" }
+      }
+    }
+  },
+  "agents": { "defaults": { "model": { "primary": "__ZAI_MODEL__" } } },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "tokenFile": "/run/secrets/telegram_bot_token",
+      "dmPolicy": "allowlist",
+      "allowFrom": ["__TELEGRAM_OWNER_ID__"],
+      "groupPolicy": "disabled",
+      "streaming": { "mode": "off" },
+      "configWrites": false
+    }
+  },
+  "commands": { "ownerAllowFrom": ["telegram:__TELEGRAM_OWNER_ID__"] },
+  "security": { "installPolicy": { "enabled": true } },
+  "skills": { "allowBundled": [], "load": { "extraDirs": ["/opt/assistant/skills"] } }
+}

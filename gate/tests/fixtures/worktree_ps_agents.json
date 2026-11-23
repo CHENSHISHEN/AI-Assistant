@@ -1,0 +1,65 @@
+{
+  "id": "fixture",
+  "ok": true,
+  "result": {
+    "worktrees": [
+      {
+        "worktreeId": "00000000-0000-4000-8000-0000000000b1::/srv/demo/repo1",
+        "repoId": "00000000-0000-4000-8000-0000000000b1",
+        "repo": "demo-repo",
+        "path": "/srv/demo/repo1",
+        "branch": "refs/heads/main",
+        "displayName": "main",
+        "liveTerminalCount": 3,
+        "terminalVerdict": "live",
+        "agents": [
+          {
+            "paneKey": "tab-1:leaf-1",
+            "parentPaneKey": null,
+            "state": "working",
+            "agentType": "codex",
+            "prompt": "实现示例功能",
+            "taskTitle": null,
+            "displayName": null,
+            "conversationName": null,
+            "lastAssistantMessage": null,
+            "toolName": null,
+            "toolInput": null,
+            "interrupted": false,
+            "stateStartedAt": 1795334000000,
+            "updatedAt": 1795334000000,
+            "hasLivePty": true,
+            "agentWait": null
+          },
+          {
+            "paneKey": "tab-2:leaf-2",
+            "parentPaneKey": null,
+            "state": "blocked",
+            "agentType": "claude",
+            "prompt": "清理构建目录",
+            "taskTitle": null,
+            "displayName": null,
+            "conversationName": null,
+            "lastAssistantMessage": null,
+            "toolName": "Bash",
+            "toolInput": "rm -rf build/",
+            "interrupted": false,
+            "stateStartedAt": 1795334100000,
+            "updatedAt": 1795334100000,
+            "hasLivePty": true,
+            "agentWait": {
+              "source": "hook",
+              "since": 1795334100000
+            }
+          }
+        ]
+      }
+    ],
+    "hostScope": {},
+    "totalCount": 1,
+    "truncated": false
+  },
+  "_meta": {
+    "runtimeId": "00000000-0000-4000-8000-0000000000ff"
+  }
+}

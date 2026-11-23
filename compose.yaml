@@ -1,0 +1,107 @@
+# 私人助手：assistant-openclaw（桥接网络）+ assistant-gate（host 网络，唯一通向宿主机的门）。
+# 配置只能由仓库渲染后下发（scripts/render_config.py），禁止在容器里 `openclaw config set` 或改 skill。
+name: assistant
+
+services:
+  assistant-openclaw:
+    image: ${OPENCLAW_IMAGE:?需要在 .env 里设置 OPENCLAW_IMAGE}
+    container_name: assistant-openclaw
+    user: "${ASSISTANT_UID:-1001}:${ASSISTANT_GID:-1001}"   # 与宿主机目录属主一致；镜像默认的 node(1000) 进不了 /home/node
+    init: true
+    restart: unless-stopped
+    command: ["node", "dist/index.js", "gateway", "--bind", "lan", "--port", "18789"]
+    environment:
+      # 状态目录放在 /srv/openclaw：镜像里 /home/node 是 0700 属 uid 1000，uid 1001 进不去
+      HOME: /srv/openclaw/home
+      OPENCLAW_HOME: /srv/openclaw/home
+      OPENCLAW_STATE_DIR: /srv/openclaw
+      OPENCLAW_CONFIG_DIR: /srv/openclaw
+      OPENCLAW_CONFIG_PATH: /srv/openclaw/openclaw.json
+      OPENCLAW_WORKSPACE_DIR: /srv/openclaw/workspace
+      OPENCLAW_GATEWAY_PORT: "18789"
+      OPENCLAW_DISABLE_BONJOUR: "1"
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:${OPENCLAW_CONSOLE_PORT:-18789}:18789"   # 控制台只在本机回环，需要时用 SSH 隧道
+    volumes:
+      - ./state:/srv/openclaw                                # 唯一可写挂载
+      - ./secrets/telegram_bot_token:/run/secrets/telegram_bot_token:ro
+      - ./secrets/zhipu_api_key:/run/secrets/zhipu_api_key:ro
+      - ./secrets/openclaw_gateway_token:/run/secrets/openclaw_gateway_token:ro
+      - ./secrets/gate_token:/run/secrets/gate_token:ro   # 调 assistant-gate 用
+      # 规则文件只读覆盖，模型改不了
+      - ./openclaw/workspace/SOUL.md:/srv/openclaw/workspace/SOUL.md:ro
+      - ./openclaw/workspace/AGENTS.md:/srv/openclaw/workspace/AGENTS.md:ro
+      - ./openclaw/skills:/opt/assistant/skills:ro
+    networks:
+      - assistant-net
+    mem_limit: 2g          # 宿主机可用内存只有约 3 GB，部署后观察再调
+    pids_limit: 512
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "node", "dist/docker-healthcheck.js"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  assistant-gate:
+    build: ./gate
+    image: assistant-gate:0.3.0
+    container_name: assistant-gate
+    user: "${ASSISTANT_UID:-1001}:${ASSISTANT_GID:-1001}"
+    init: true
+    restart: unless-stopped
+    network_mode: host                  # 才能访问宿主机上的 Orca；只监听 assistant-net 的网关地址
+    depends_on:
+      - assistant-openclaw              # 保证 assistant-net（172.28.0.1）先被创建
+    environment:
+      HOME: /tmp/h                      # Orca 环境登记只放在 tmpfs，每次启动用配对码文件重新登记
+      GATE_TOKEN_FILE: /run/secrets/gate_token
+      GATE_PAIRING_FILE: /run/secrets/orca_pairing_code
+      GATE_BIND_HOST: 172.28.0.1
+      GATE_BIND_PORT: "8500"
+      GATE_ORCA_ENVIRONMENT: assistant-gate
+      # ---- 监视器与通知（P2）----
+      GATE_NOTIFY_MODE: ${GATE_NOTIFY_MODE:-dry-run}          # dry-run 只记录；live 才真往 Telegram 发
+      GATE_TELEGRAM_TOKEN_FILE: /run/secrets/telegram_bot_token   # 网关只用它调 sendMessage（只发不收）
+      GATE_TELEGRAM_CHAT_ID: ${TELEGRAM_OWNER_ID}
+      GATE_WORKBENCH_URL: http://127.0.0.1:8400                # 只读 GET /api/status、/api/entries
+      GATE_NOTIFY_WORKBENCH_DOWN: ${GATE_NOTIFY_WORKBENCH_DOWN:-0}
+      GATE_DB_PATH: /data/monitor.db
+      # ---- 动手能力（P3）----
+      GATE_APP_ACTIONS: ${GATE_APP_ACTIONS:-off}                       # 应用启停开关，默认关：对真实 Workbench 不发任何写调用
+      GATE_USER_DIRECTED_REPLY: ${GATE_USER_DIRECTED_REPLY:-approval}  # approval | trust-flag
+      GATE_WAIT_THRESHOLD_S: ${GATE_WAIT_THRESHOLD_S:-300}   # 会话等待确认多久算"超过 5 分钟"
+    volumes:
+      - /opt/Orca:/opt/Orca:ro          # 命令行版本始终与 Orca 服务一致
+      - ./gate/data:/data               # 网关数据卷（P3 起放审计、纳管名单）
+      - ./secrets/gate_token:/run/secrets/gate_token:ro
+      - ./secrets/telegram_bot_token:/run/secrets/telegram_bot_token:ro   # 只发通知用，网关不收消息
+      - ./secrets/orca_pairing_code:/run/secrets/orca_pairing_code:ro   # 换配对码：替换此文件后重启网关
+    tmpfs:
+      - /tmp:uid=1001,gid=1001,mode=700
+    mem_limit: 512m
+    pids_limit: 256
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://172.28.0.1:8500/healthz', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+
+networks:
+  assistant-net:
+    name: assistant-net
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-assistant   # 固定网桥接口名，防火墙规则按它匹配
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24
+          gateway: 172.28.0.1
