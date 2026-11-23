@@ -19,6 +19,7 @@ from .timefmt import hhmm_cst, iso_utc
 
 WAIT_STATES = ("blocked", "waiting")
 DIGEST_LINES = 10
+PRUNE_AFTER = 3        # 纳管句柄连续这么多次采集都不在存活列表里，才从名单移出
 
 
 def _s(value, limit: int) -> str:
@@ -27,9 +28,9 @@ def _s(value, limit: int) -> str:
 
 class SessionsMonitor:
     def __init__(self, orca, store: MonitorStore, notifier, now: Callable[[], datetime],
-                 wait_threshold_s: int = 300, digest_window_s: int = 600):
+                 wait_threshold_s: int = 300, digest_window_s: int = 600, prune_after: int = PRUNE_AFTER):
         self._orca, self._store, self._n, self._now = orca, store, notifier, now
-        self._threshold, self._window = wait_threshold_s, digest_window_s
+        self._threshold, self._window, self._prune_after = wait_threshold_s, digest_window_s, prune_after
         self.last: Dict = {"collected_at": None, "orca": "not-polled", "pending": [], "agents": 0}
 
     # ---- 持久化的小状态（JSON 放在键值表里）----
@@ -39,6 +40,27 @@ class SessionsMonitor:
             return json.loads(raw) if raw else default
         except ValueError:
             return default
+
+    def _prune_managed(self, alive) -> None:
+        """纳管名单清理：句柄连续 N 次缺席才移出；Orca 偶尔返回空列表（alive 为空而名单非空）时跳过本次，不累计。"""
+        managed = [m["handle"] for m in self._store.managed_list()]
+        alive = set(alive)
+        if not managed:
+            self._store.kv_set("managed_absent", "{}")
+            return
+        if not alive:
+            return
+        absent = self._kv_json("managed_absent", {})
+        keep: Dict[str, int] = {}
+        for h in managed:
+            if h in alive:
+                continue
+            n = int(absent.get(h, 0)) + 1
+            if n >= self._prune_after:
+                self._store.managed_remove(h)
+            else:
+                keep[h] = n
+        self._store.kv_set("managed_absent", json.dumps(keep))
 
     def _remind_text(self, a: Dict, waited_s: float, managed: bool, when: str) -> str:
         detail = " ".join(x for x in (_s(a.get("tool"), 60), _s(a.get("tool_input"), 200) or _s(a.get("prompt"), 200)) if x)
@@ -61,7 +83,7 @@ class SessionsMonitor:
             return snap
         baseline = self._store.kv_get("sessions_baseline_done") is None
         when = hhmm_cst(now)
-        self._store.managed_prune(data["alive"])
+        self._prune_managed(data["alive"])
         prev: Dict[str, Dict] = self._kv_json("sess_prev", {})
         cur_prev: Dict[str, Dict] = {}
         digest: List[Dict] = self._kv_json("sess_digest", [])

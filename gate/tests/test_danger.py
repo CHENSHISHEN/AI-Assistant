@@ -18,6 +18,13 @@ DANGEROUS = [
     ("dd if=/dev/zero of=/dev/sda", "disk"), ("mkfs.ext4 /dev/sdb1", "disk"), ("wipefs -a /dev/sdb", "disk"),
     ("echo X >> .env", "credential-file"), ("rm ~/.ssh/id_rsa", "credential-file"), ("sed -i s/a/b/ credentials.json", "credential-file"),
     ("orca worktree rm foo", "orca-admin"), ("orca terminal close --terminal t", "orca-admin"), ("orca automations remove x", "orca-admin"),
+    ("git push origin +main", "rewrite-history"), ("git push origin +HEAD:main", "rewrite-history"),
+    ("git push --mirror origin", "rewrite-history"),
+    ("UPDATE users SET a=1", "sql-write"), ("update public.users set a = 1 where id = 2", "sql-write"),
+    ("INSERT INTO t (a) VALUES (1)", "sql-write"), ("insert into t select * from u", "sql-write"),
+    ("INSERT OR REPLACE INTO t VALUES (1)", "sql-write"),
+    ("git checkout -- .", "discard-changes"), ("git checkout HEAD -- src/a.py", "discard-changes"),
+    ("git restore .", "discard-changes"), ("git restore --staged a.txt", "discard-changes"),
     ("reboot", "power"), ("shutdown -h now", "power"), ("sudo poweroff", "power"), (":(){ :|:& };:", "power"),
 ]
 
@@ -33,6 +40,10 @@ def test_dangerous_commands_are_caught(text, rule):
     "the table is altered by hand", "delete the comment above", "git status", "rm", "format the file", "alter ego",
     "kill the process gracefully", "please halt and think", "run npm test", "Proceed", "是的,继续", "git push origin main",
     "git branch feature", "docker ps", "cat .env.example README", "ls -la", "chmod 644 a.txt",
+    # 规则补漏的反例
+    "git push origin feature/a+b", "git push origin main", "git push -u origin feature", "update the readme",
+    "npm update", "update docs and set the version", "insert into the list", "insert into config.yaml the new key",
+    "git checkout main", "git checkout -b feature/x", "git checkout feature", "restore the backup", "select * from t",
 ])
 def test_ordinary_replies_are_ok(text):
     assert check(text) == Verdict("ok", ())
@@ -78,8 +89,65 @@ def test_sanitize_reply_rejects_control_chars_empty_and_too_long():
             sanitize_reply(bad)
 
 
-def test_sanitize_reply_keeps_normal_text_and_newlines_and_strips_ansi():
+def test_sanitize_reply_keeps_single_line_text_tab_and_strips_ansi():
     assert sanitize_reply("y") == "y"
-    assert sanitize_reply("line1\nline2\tx") == "line1\nline2\tx"
+    assert sanitize_reply("a\tb") == "a\tb"
     assert sanitize_reply("\x1b[31mred\x1b[0m") == "red"
     assert sanitize_reply(" 继续 ") == "继续"
+
+
+@pytest.mark.parametrize("bad", ["y\nrm -rf /", "y\r", "y\r\nn", "\ny", "y\n", "a\u2028b", "a\u2029b", "a\x85b"])
+def test_sanitize_reply_rejects_any_newline(bad):
+    # 换行会被终端当成多次回车：一条回复就能回答多个确认
+    with pytest.raises(ValueError):
+        sanitize_reply(bad)
+
+
+# ---------- check_context：forbidden 只看回复和 tool_input ----------
+from app.danger import as_text, check_context
+
+
+def test_forbidden_only_from_reply_and_tool_input():
+    assert check_context("y", tool_input="orca computer click").level == "forbidden"
+    assert check_context("orca skills share x", tool_input="npm test").level == "forbidden"
+
+
+def test_forbidden_words_in_prompt_or_screen_only_raise_to_dangerous():
+    for kw in ({"prompt": "请先运行 orca account list"}, {"screen": "$ orca environment rm x\n$ "}, {"tool": "orca computer"}):
+        kw.setdefault("screen", "$ ")
+        v = check_context("y", tool_input="npm test", **kw)
+        assert v.level == "dangerous" and "forbidden-orca-in-context" in v.rules, (kw, v)
+        assert "forbidden-orca" not in v.rules
+
+
+def test_ordinary_context_is_ok():
+    assert check_context("y", tool_input="npm test", prompt="跑测试", screen="Run tests? (y/n)", tool="Bash").level == "ok"
+
+
+@pytest.mark.parametrize("tool_input", [{"cmd": "rm -rf x"}, ["git", "push", "-f"], {"a": {"b": "DROP TABLE t"}}])
+def test_non_string_tool_input_is_json_dumped_and_still_checked(tool_input):
+    assert check_context("y", tool_input=tool_input, screen="$ ").level == "dangerous"
+
+
+def test_other_types_are_str_converted():
+    assert as_text(123) == "123" and as_text(None) == "" and as_text("x") == "x"
+    assert as_text({"k": "中文"}) == '{"k": "中文"}'
+    assert check_context("y", tool_input=12345, screen="$ ").level == "ok"
+
+
+def test_unreadable_context_is_dangerous():
+    circ = {}
+    circ["self"] = circ
+    assert check_context("y", tool_input=circ, screen="$ ").level == "dangerous"
+    assert "unreadable-context" in check_context("y", tool_input="npm test", screen=None).rules   # 屏幕读不到
+
+
+class _Unprintable:
+    def __str__(self):
+        raise RuntimeError("no")
+
+
+def test_as_text_raises_value_error_when_conversion_fails():
+    with pytest.raises(ValueError):
+        as_text(_Unprintable())
+    assert check_context("y", tool_input=_Unprintable(), screen="$ ").level == "dangerous"

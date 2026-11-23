@@ -29,6 +29,14 @@ class ApprovalError(Exception):
         self.status, self.code, self.message = status, code, message
 
 
+class ApprovalAbort(Exception):
+    """执行器发现审批单所依据的上下文已变化：作废这张单、通知用户。message 是可以给用户看的受控文字。"""
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+
 class ApprovalService:
     def __init__(self, store: MonitorStore, notifier, audit: AuditLog, now: Callable[[], datetime], secret: bytes,
                  ttl_s: int = 600, max_attempts: int = 5, max_pending: int = 5,
@@ -53,6 +61,10 @@ class ApprovalService:
         now = self._now()
         if self._locked():
             raise ApprovalError(429, "approvals_locked", "审批因多次错误码被暂时锁定")
+        if not self._n.delivers():              # dry-run：码发不出去，不能当作审批单创建成功
+            self._audit.write("gate", kind, "-", "failed", detail="通知处于 dry-run，审批码无法送达，未创建审批单")
+            raise ApprovalError(503, "approval_delivery_unavailable",
+                                "通知目前是 dry-run 模式，审批码没法发给用户，所以没有创建审批单；请如实告诉用户")
         if len(self._store.approvals_pending(iso_utc(now))) >= self._max_pending:
             raise ApprovalError(429, "too_many_pending", "未决审批单太多")
         summary = sanitize(summary, 200)[0]
@@ -105,6 +117,11 @@ class ApprovalService:
             self._audit.write("gate", row["kind"], approval_id, "executed", detail=row["summary"])
             self._n.send_now("approval-result", approval_id, f"[审批结果] 审批单 {approval_id} 已执行：{row['summary']}")
             return {"status": "executed", "result": result}
+        except ApprovalAbort as e:                                                 # 上下文变了：作废并通知用户
+            self._store.approval_update(approval_id, status="failed", result_json="{}", clear_code=True)
+            self._audit.write("gate", row["kind"], approval_id, "failed", detail=e.message)
+            self._n.send_now("approval-result", approval_id, f"[审批结果] 审批单 {approval_id} 已作废、没有执行：{e.message}")
+            raise ApprovalError(409, "context_changed", e.message) from None
         except Exception as e:  # noqa: BLE001  不把异常文本（可能含路径、堆栈）返回给模型
             self._store.approval_update(approval_id, status="failed", result_json="{}", clear_code=True)
             self._audit.write("gate", row["kind"], approval_id, "failed", detail=f"{type(e).__name__}")

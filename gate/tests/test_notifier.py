@@ -236,3 +236,9 @@ def test_send_now_in_dry_run_does_not_call_http(tmp_path):
     n, store, _ = make(tmp_path, ok_handler(calls), mode="dry-run")
     assert n.send_now("approval", "ID", "x") is True and calls == []
     assert store.recent_log(1)[0]["outcome"] == "dry-run"
+
+
+def test_delivers_is_true_only_in_live_mode(tmp_path):
+    live, _s, _ = make(tmp_path, ok_handler([]), mode="live")
+    dry, _s2, _ = make(tmp_path, ok_handler([]), mode="dry-run")
+    assert live.delivers() is True and dry.delivers() is False

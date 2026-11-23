@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from app.approvals import ApprovalError, ApprovalService
+from app.approvals import ApprovalAbort, ApprovalError, ApprovalService
 from app.audit import AuditLog
 from app.monitor.store import MonitorStore
 
@@ -19,6 +19,10 @@ class Notif:
     """假通知器：记录 send_now 的文本，可设为发送失败。"""
     def __init__(self):
         self.sent, self.ok = [], True
+        self.live = True
+
+    def delivers(self):
+        return self.live
 
     def send_now(self, kind, key, text):
         self.sent.append((kind, key, text))
@@ -258,3 +262,31 @@ def test_result_notification_sent_to_user_on_success():
     aid = e.create(summary="重启应用 info")["approval_id"]
     e.svc.confirm(aid, e.n.code_of(), e.ex)
     assert e.n.sent[-1][0] == "approval-result" and "已执行" in e.n.sent[-1][2] and "重启应用 info" in e.n.sent[-1][2]
+
+
+def test_dry_run_does_not_pretend_the_code_was_delivered():
+    # 审批码在 dry-run 下没有真的发出去：不能创建审批单，要让模型如实告诉用户
+    e = Env()
+    e.n.live = False
+    with pytest.raises(ApprovalError) as ex:
+        e.create()
+    assert ex.value.status == 503 and ex.value.code == "approval_delivery_unavailable"
+    assert e.n.sent == [] and e.svc.pending() == []
+    assert any(a["decision"] == "failed" for a in e.audit.recent())
+
+
+def test_approval_abort_voids_the_approval_and_tells_the_user():
+    e = Env()
+    aid = e.create()["approval_id"]; code = e.n.code_of()
+
+    def abort(p):
+        raise ApprovalAbort("会话的状态已经变了 password=hunter2")
+
+    with pytest.raises(ApprovalError) as ex:
+        e.svc.confirm(aid, code, {"echo": abort})
+    assert ex.value.status == 409 and ex.value.code == "context_changed"
+    last = e.n.sent[-1]
+    assert last[0] == "approval-result" and "已作废" in last[2] and "没有执行" in last[2]
+    with pytest.raises(ApprovalError) as ex2:
+        e.svc.confirm(aid, code, e.ex)
+    assert ex2.value.status == 410 and e.calls == []

@@ -159,7 +159,7 @@ def test_client_has_no_public_arbitrary_argv_method():
 def test_read_terminal_joins_soft_wrapped_rows():
     # 真实输出（--screen）里，终端在列宽处软换行，tailRows[i].wrapped=True 表示第 i 行是上一行的延续
     t = client(FakeRunner(fx("terminal_read.json"))).read_terminal(HANDLE)
-    assert t["tail"][4] == "export API_KEY=sk-Ab12Cd34Ef56Gh78Ij90 done"
+    assert t["tail"][4] == "export API_KEY=" + "sk-" + "Ab12Cd34Ef56Gh78Ij90" + " done"
     assert len(t["tail"]) == 5 and "tailRows" not in t
 
 
@@ -210,7 +210,8 @@ def test_send_text_argv_is_fixed_and_text_is_one_element():
 
 
 @pytest.mark.parametrize("handle,text", [("--help", "y"), ("term_x", "y"), (HANDLE, ""), (HANDLE, "   "),
-                                         (HANDLE, "a\x00b"), (HANDLE, "a\x1b[31mb"), (HANDLE, "x" * 2001)])
+                                         (HANDLE, "a\x00b"), (HANDLE, "a\x1b[31mb"), (HANDLE, "x" * 2001),
+                                         (HANDLE, "y\nn"), (HANDLE, "y\r"), (HANDLE, "y\u2028n")])
 def test_send_text_rejects_bad_input_without_calling_orca(handle, text):
     r = FakeRunner("{}")
     with pytest.raises(ValueError):

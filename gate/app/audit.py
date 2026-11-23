@@ -10,7 +10,7 @@ from .monitor.store import MonitorStore
 from .monitor.timefmt import iso_utc
 from .redact import redact_json, sanitize
 
-DECISIONS = ("auto", "approval-required", "approved", "denied", "forbidden", "executed", "failed", "expired", "locked")
+DECISIONS = ("auto", "user-directed", "approval-required", "approved", "denied", "forbidden", "executed", "failed", "expired", "locked")
 
 
 class AuditLog:

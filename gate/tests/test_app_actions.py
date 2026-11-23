@@ -23,6 +23,10 @@ SK = "sk-" + "Ab12Cd34Ef56Gh78Ij90"
 class Notif:
     def __init__(self):
         self.sent = []
+        self.live = True
+
+    def delivers(self):
+        return self.live
 
     def send_now(self, kind, key, text):
         self.sent.append((kind, key, text)); return True

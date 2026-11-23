@@ -145,11 +145,12 @@ class OrcaClient:
     def send_text(self, handle: str, text: str) -> dict:
         """【写】向终端输入一段文本并回车。固定 argv；文本以 --text=<原文> 单个元素传入（实测以 - 开头也不会被当成选项）。
 
-        调用方（ReplyService）负责先做危险规则判断；这里只做格式校验。
+        调用方（ReplyService）负责先做危险规则判断；这里只做格式校验。文本必须是单行：换行会被终端当成多次回车，
+        一条回复就能回答多个确认，所以含 \\n、\\r 的文本一律拒绝。
         """
         if not valid_handle(handle):
             raise ValueError("非法的终端句柄")
-        if not isinstance(text, str) or not text.strip() or len(text) > 2000 or re.search(r"[\x00-\x08\x0b-\x1f\x7f]", text):
+        if not isinstance(text, str) or not text.strip() or len(text) > 2000 or re.search("[\x00-\x08\x0a-\x1f\x7f\x85\u2028\u2029]", text):
             raise ValueError("非法的回复文本")
         return dict(self._call(["terminal", "send", "--terminal", handle, f"--text={text}", "--enter"]).get("send") or {})
 

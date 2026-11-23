@@ -84,6 +84,10 @@ class Notifier:
             self._sent_times.append(self._clock())
         return self._deliver(kind, key, clean)
 
+    def delivers(self) -> bool:
+        """是否真的会把消息发给用户。dry-run 下为 False：审批码这类"必须送达"的消息不能当作发送成功。"""
+        return self._s.notify_mode == "live"
+
     def send_now(self, kind: str, key: str, text: str) -> bool:
         """立即发送，不入重试队列，不受限流约束（审批码这类消息：发不出去就应作废，不能在库里排队）。
 

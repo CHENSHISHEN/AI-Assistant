@@ -132,13 +132,45 @@ def test_baseline_cycle_is_silent():
     assert h.rec.calls == []           # 基线周期里已经在等的会话不推送（存量不翻出来）
 
 
-def test_vanished_session_is_removed_from_managed_list():
-    # Review Focus 5
+def test_vanished_session_is_removed_only_after_three_consecutive_absences():
+    # Review Focus 5 + 审查意见 8：连续 3 次缺席才清理
     h = H()
     h.store.managed_add("term_gone", "user", "x"); h.store.managed_add("term_a", "user", "x")
     h.orca.set("term_a", "working", h.now)
+    h.poll(60); h.poll(60)
+    assert {m["handle"] for m in h.store.managed_list()} == {"term_gone", "term_a"}
     h.poll(60)
     assert [m["handle"] for m in h.store.managed_list()] == ["term_a"]
+
+
+def test_a_single_empty_listing_does_not_wipe_the_managed_list():
+    h = H()
+    h.store.managed_add("term_a", "user", "x"); h.store.managed_add("term_b", "user", "x")
+    for _ in range(5):                       # Orca 连续返回空列表：全部跳过，不累计
+        h.poll(60)
+    assert {m["handle"] for m in h.store.managed_list()} == {"term_a", "term_b"}
+
+
+def test_reappearing_handle_resets_the_absence_count():
+    h = H()
+    h.store.managed_add("term_a", "user", "x"); h.orca.set("term_other", "working", h.now)
+    h.poll(60); h.poll(60)                   # term_a 缺席 2 次
+    h.orca.set("term_a", "working", h.now); h.poll(60)       # 回来了
+    h.orca.agents.pop("term_a"); h.poll(60); h.poll(60)      # 再缺席 2 次，仍不应被清
+    assert h.store.is_managed("term_a")
+    h.poll(60)
+    assert not h.store.is_managed("term_a")
+
+
+def test_absence_counts_survive_a_restart(tmp_path):
+    db = str(tmp_path / "m.db")
+    h = H(store=MonitorStore(db))
+    h.store.managed_add("term_a", "user", "x"); h.orca.set("term_other", "working", h.now)
+    h.poll(60); h.poll(60)
+    h.store.close()
+    h2 = H(baseline=False, store=MonitorStore(db)); h2.now = h.now; h2.orca.set("term_other", "working", h2.now)
+    h2.poll(60)
+    assert not h2.store.is_managed("term_a")
 
 
 def test_managed_shell_terminal_without_agent_is_kept_while_alive():
