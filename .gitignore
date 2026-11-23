@@ -1,9 +1,33 @@
-# 密钥、运行状态、网关数据卷：不进 git
+# ---- 涉密文件：一律不进 git ----
+# 密钥目录（Bot token、模型 API key、Orca 配对码、内部 token）
 secrets/
+# OpenClaw 运行状态（会话、记忆、渲染后的配置、插件）
 state/
+# 网关数据卷（纳管名单、审计、通知日志）
 gate/data/
+# 本机参数（含本人 Telegram ID）；只提交 .env.example
 .env
-# Python / 编辑器
+.env.*
+!.env.example
+# 其他常见凭据形式，防止误放
+*.pem
+*.key
+*.p12
+*.pfx
+*.token
+*credentials*.json
+*.secret
+*.sqlite
+*.db
+*.db-shm
+*.db-wal
+# 备份与导出
+*.bak
+*.tar
+*.tar.gz
+backup*/
+
+# ---- Python / 编辑器 ----
 __pycache__/
 .pytest_cache/
 .venv/
